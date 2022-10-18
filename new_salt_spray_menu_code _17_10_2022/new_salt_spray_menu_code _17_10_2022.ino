@@ -681,7 +681,7 @@ void arrowticker(int x, int y, int previousValue, int currentValue){
 void intervalSetup(){
   int tempInterval;
   int timeinmilis;
-  int tempIncrement =5;
+  int tempIncrement = increment;
   tempInterval = EEPROMReadlong(intervalAddress) /1000;
   int y = 1 ;
   int z = 2;
