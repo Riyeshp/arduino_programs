@@ -14,7 +14,7 @@ Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
 int menu = 0; // menu value to prevent screen refresh
 String screens[]= {"->Settings","->Calibration", "->Test Status"};
-String settingScreens[]={"< FogLevel     >", "< Interval     >", "< Increment    >"};
+String settingScreens[]={"< FogLevel     >", "< Interval     >", "< Increment    >", "< Test Duration>"};
 String calibrationScreens[]={"< Start        >","< old results  >"};
 String testScreens[]={"< Test start >","< Manual Start >"};
 
@@ -47,6 +47,8 @@ int increment;
 int incrementAddress=35;
 int testSeconds;
 int testSecondsAddress=40;//Address location on EEPROM memory
+int testDuration;
+int testDurationAddress = 45;
 
 #define RED 0x1
 #define YELLOW 0x3
@@ -130,6 +132,7 @@ void setup() {
   testSeconds =EEPROMReadlong(testSecondsAddress);
   range = EEPROMReadlong(rangeAddress);
   increment =EEPROMReadlong(incrementAddress);
+  testDuration =EEPROMReadlong(testDurationAddress);
   pinMode(10, OUTPUT);
   Serial.print("interval:");
   Serial.println(interval);
@@ -141,23 +144,29 @@ void setup() {
   Serial.println(minReading);
   Serial.print("testMinutes:");
   Serial.println(testMinutes);
+  Serial.print("testSeconds:");
+  Serial.println(testSeconds);
   Serial.print("range:");
   Serial.println(range);
   Serial.print("increment:");
   Serial.println(increment);
+  Serial.print("Test Duration:");
+  Serial.println(testDuration);
 }
 
 void loop() {
   uint8_t buttons = lcd.readButtons();
 
-
+  // below line sof codes are used to whenever values had to written into the EEPROM addresses
   // EEPROMWritelong(foglevelAddress,0);
-  // EEPROMWritelong(incrementAddress,10);
+  //EEPROMWritelong(incrementAddress,1);
   // EEPROMWritelong(maxReadingAddress, 470);
   //  EEPROMWritelong(minReadingAddress, 399);
   // EEPROMWritelong(rangeAddress, 91);
   // EEPROMWritelong(testMinutesAddress, 30);
   // EEPROMWritelong(testSecondsAddress, 23);
+  // EEPROMWritelong(testDurationAddress, 30);
+  
   //button selected
     if (buttons) {
       lcd.clear();
@@ -436,6 +445,7 @@ void fogTest(int interval , int foglevel, int range){
   //percentage logic here
   // int analogValue = analogRead(A0);
   // int analogValue1 = analogRead(A2);
+  testDuration =EEPROMReadlong(testDurationAddress);
   int limit;
   int upperlimit;
   int lowerlimit;
@@ -443,6 +453,9 @@ void fogTest(int interval , int foglevel, int range){
   int currentValue;
   int tolerance = 2;
   fogTestStatus = 1;
+  int startTime = millis();
+  float currentTime;
+  float tempTime;
   sensorValueReading();
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -510,6 +523,16 @@ void fogTest(int interval , int foglevel, int range){
         lcd.write(byte(1));
     }
     previousValue = currentValue;
+    currentTime = millis();
+    tempTime = (currentTime - startTime)/60000;
+    // Serial.println(startTime);
+    // Serial.println(tempTime);
+    // Serial.println(currentTime);
+    // Serial.println(tempTime);
+    if(tempTime > testDuration){
+      fogTestStatus = 0;
+      Serial.println("Test Finished");
+    }
   }
 
 }
@@ -586,6 +609,10 @@ void menuView( String menu[], int menulength){
           case 2:            
             //lcd.clear();
             incrementSetup();
+            break;
+          case 3:            
+            //lcd.clear();
+            testDurationSetup();
             break;
         }
       }else if (menu == calibrationScreens){
@@ -681,7 +708,7 @@ void arrowticker(int x, int y, int previousValue, int currentValue){
 void intervalSetup(){
   int tempInterval;
   int timeinmilis;
-  int tempIncrement = increment;
+  int tempIncrement = 1; //increment;// change that to increment if you want to drive the interval increment by increment variable
   tempInterval = EEPROMReadlong(intervalAddress) /1000;
   int y = 1 ;
   int z = 2;
@@ -818,7 +845,68 @@ void incrementSetup(){
      
       Serial.println("test 779");
     }
+  }
+}
+
+void testDurationSetup(){
+  int tempDuration = EEPROMReadlong(testDurationAddress);
+  // int tempDuration = tempValue;
+  int x = 1;
+  lcd.clear();
+  while(x == 1){
+    lcd.setCursor(0, 1);
+    lcd.print("<Duration: ");
+    lcd.setCursor(10, 1);
+    lcd.print(tempDuration);
+    lcd.setCursor(13, 1);
+    lcd.print("min>");
+    delay(300);
+    uint8_t buttons = lcd.readButtons();
+    Serial.println("test 857");
+  
+    if(buttons & BUTTON_LEFT && tempDuration > 0){
+      tempDuration= tempDuration-5;
+      Serial.println("test 861");
+        // if(tempDuration < 0){
+        //   tempDuration = 0;
+        //   lcd.clear();
+        // }
+    }else if(buttons & BUTTON_RIGHT && tempDuration < 300 ){ //the Duration is limited to max of 5hrs i.e 300 mins
+      tempDuration= tempDuration+5;
+      Serial.println("test 770");
+    }else if(buttons & BUTTON_SELECT){
+      Serial.println(tempDuration);
+      // tempValue = tempDuration*1000;
+      // Serial.println(tempValue);
+      EEPROMWritelong(testDurationAddress,tempDuration);
+      // Serial.println("test 774");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Duration: ");
+      lcd.print(tempDuration);
+      lcd.println("    ");
+      lcd.setCursor(0, 1);
+      lcd.print("Press ");
+      lcd.setCursor(6,1);
+      lcd.write(2);
+      lcd.setCursor(7, 1);
+      lcd.println(" to exit  ");
+      x = 0;
+    }else if(buttons & BUTTON_DOWN){
+     
+      // Serial.println("test 779");
     }
   }
+}
+
+
+
+
+
+
+
+
+
+
 
 
