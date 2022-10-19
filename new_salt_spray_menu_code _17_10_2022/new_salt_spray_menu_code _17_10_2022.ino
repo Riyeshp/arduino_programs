@@ -157,9 +157,9 @@ void setup() {
 void loop() {
   uint8_t buttons = lcd.readButtons();
 
-  // below line sof codes are used to whenever values had to written into the EEPROM addresses
+  // below lines of codes are used  whenever values had to be written into the EEPROM addresses DONT delete!!
   // EEPROMWritelong(foglevelAddress,0);
-  //EEPROMWritelong(incrementAddress,1);
+  // EEPROMWritelong(incrementAddress,1);
   // EEPROMWritelong(maxReadingAddress, 470);
   //  EEPROMWritelong(minReadingAddress, 399);
   // EEPROMWritelong(rangeAddress, 91);
