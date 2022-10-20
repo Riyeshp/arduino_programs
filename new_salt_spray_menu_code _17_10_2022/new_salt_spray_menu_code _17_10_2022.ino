@@ -3,14 +3,13 @@
 #include <Adafruit_RGBLCDShield.h>
 #include <utility/Adafruit_MCP23017.h>
 #include <math.h>
+#include <movingAvg.h> 
 
 #define NUMITEMS(arg) ((unsigned int) (sizeof (arg) / sizeof (arg [0])))
-
 template< typename T, size_t N > size_t ArraySize (T (&) [N]){ return N; }
-
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
-// Variables will change:
+// Variables
 
 int menu = 0; // menu value to prevent screen refresh
 String screens[]= {"->Settings","->Calibration", "->Test Status"};
@@ -30,13 +29,15 @@ int default_max;//
 int default_min;//
 int pinOut = 10;
 int upwardSwitch = 0;
+movingAvg sensorValues(30);
+
 //EEPROM Variables
 int interval;
-int intervalAddress = 5;//Address location on EEPROM memory
+int intervalAddress=5;//Address location on EEPROM memory
 int fogLevel;
-int foglevelAddress = 10;//Address location on EEPROM memory
+int foglevelAddress=10;//Address location on EEPROM memory
 int maxReading;
-int maxReadingAddress =15;//Address location on EEPROM memory
+int maxReadingAddress=15;//Address location on EEPROM memory
 int minReading;
 int minReadingAddress=20;//Address location on EEPROM memory
 int range;
@@ -48,8 +49,9 @@ int incrementAddress=35;
 int testSeconds;
 int testSecondsAddress=40;//Address location on EEPROM memory
 int testDuration;
-int testDurationAddress = 45;
+int testDurationAddress=45;
 
+//LCD color assignment
 #define RED 0x1
 #define YELLOW 0x3
 #define GREEN 0x2
@@ -58,6 +60,7 @@ int testDurationAddress = 45;
 #define VIOLET 0x5
 #define WHITE 0x7
 
+//Custom character assignment
 byte customChar1[] = {
   B00100,
   B01110,
@@ -68,7 +71,6 @@ byte customChar1[] = {
   B01110,
   B01110
 };
-
 byte customChar2[] = {
   B01110,
   B01110,
@@ -79,7 +81,6 @@ byte customChar2[] = {
   B01110,
   B00100
 };
-
 byte arrowdown[] = {
   B00100,
   B00100,
@@ -119,6 +120,7 @@ void EEPROMWritelong(int address, long value)
 
 void setup() {
   Serial.begin(9600);
+  sensorValues.begin();
   lcd.begin(16, 2);
   lcd.setBacklight(WHITE);
   lcd.createChar(0, customChar1);
@@ -156,19 +158,17 @@ void setup() {
 
 void loop() {
   uint8_t buttons = lcd.readButtons();
-
   // below lines of codes are used  whenever values had to be written into the EEPROM addresses DONT delete!!
   // EEPROMWritelong(foglevelAddress,0);
   // EEPROMWritelong(incrementAddress,1);
   // EEPROMWritelong(maxReadingAddress, 470);
-  //  EEPROMWritelong(minReadingAddress, 399);
-  // EEPROMWritelong(rangeAddress, 91);
+  // EEPROMWritelong(minReadingAddress, 399);
+  // EEPROMWritelong(rangeAddress, 71);
   // EEPROMWritelong(testMinutesAddress, 30);
   // EEPROMWritelong(testSecondsAddress, 23);
-  // EEPROMWritelong(testDurationAddress, 30);
-  
+  // EEPROMWritelong(testDurationAddress, 60);
   //button selected
-    if (buttons) {
+  if (buttons) {
       lcd.clear();
       lcd.setCursor(0,0);
       if (buttons & BUTTON_UP) {
@@ -185,109 +185,98 @@ void loop() {
       }
     }
   //button not selected landing screen
-    if(!buttons){
-      if(menu == 0){//menu value is just to avoid lcd refresh
-        lcd.setBacklight(YELLOW);
-        sensorValueReading();  
-       // sensorSimulator(487, 344);//only use for simulation with out sensors ******
-        displayMenu(99);
-        delay(25);
+  if(!buttons){
+    if(menu == 0){//menu value is just to avoid lcd refresh
+      lcd.setBacklight(YELLOW);
+      sensorValueReading();  
+      displayMenu(99);
     }
-          }
-    // delay(500);
+    delay(1000);    
+  }
 }
 
 void displayMenu(int x) {//obselete function of displayView  but is used to display landing screen
-     switch (x) {
-      default:
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print ("Default");
-     
-      case 0:
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print (screens[x]);
-        lcd.setCursor(0,1);
-        lcd.print(x);
-        // menu =100;
-        break;
-      case 1:
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print (screens[x]);
-        lcd.setCursor(0,1);
-        lcd.print(x);
-        menu =100;
-        // calibration();
-        break;
-      case 2:
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print (screens[x]);    
-        lcd.setCursor(0,1);
-        lcd.print(x);
-        menu =100;
-        break;
-      case 3:
-        fogTest(interval,fogLevel, range);
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print ("->Fog test");      
-        lcd.setCursor(0,1);
-        lcd.print(x);
-        lcd.setCursor(2,1);
-        lcd.print("Fog Level:10%");
-        menu =100;
-        break;
-      case 97:
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print ("Calib Inprogress");
-        lcd.setCursor(6, 0);
-        lcd.print (range);
-        lcd.setCursor(9, 0);
-        lcd.print ("Time:");
-        lcd.setCursor(14, 0);
-        lcd.print (testMinutes);
-        lcd.setCursor(0,1);
-        lcd.print(sensorReading);
-        break;
-      case 98:
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print ("Range:");
-        lcd.setCursor(6, 0);
-        lcd.print (range);
-        lcd.setCursor(11, 0);
-        lcd.print (testMinutes);
-        lcd.print(":");
-        lcd.print(testSeconds);        
-        lcd.setCursor(0,1);
-        lcd.print("Max:");
-        // Serial.println(maxReading);
-        lcd.setCursor(4,1);
-        lcd.print(maxReading);
-        lcd.setCursor(9,1);
-        lcd.print("Min:");
-        lcd.print(minReading);
-        // lcd.setCursor(14,1);
-        // lcd.print (sensorReading);
-        // menu =100;
-        break;
-      case 99:
-        // lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print ("-> Fog Reading   ");//extra space to clear screen without lcd.clear()
-        lcd.setCursor(0,1);
-        lcd.write(toggleSwitch);
-        lcd.setCursor(2,1);
-        lcd.print (sensorReading);// sensorReading2 is used for sensorSimulator /sensorReading is used for data from sensors****    
-        lcd.setCursor(5,1);
-        lcd.print (" lumen      ");//extra space to clear screen without lcd.clear()
-        // menu =100;
-        break;
-    }
+  switch (x) {
+    default:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print ("Default");     
+    case 0:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print (screens[x]);
+      lcd.setCursor(0,1);
+      lcd.print(x);
+      break;
+    case 1:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print (screens[x]);
+      lcd.setCursor(0,1);
+      lcd.print(x);
+      menu =100;
+      break;
+    case 2:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print (screens[x]);    
+      lcd.setCursor(0,1);
+      lcd.print(x);
+      menu =100;
+      break;
+    case 3:
+      fogTest(interval,fogLevel, range);
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print ("->Fog test");      
+      lcd.setCursor(0,1);
+      lcd.print(x);
+      lcd.setCursor(2,1);
+      lcd.print("Fog Level:10%");
+      menu =100;
+      break;
+    case 97:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print ("Calib Inprogress");
+      lcd.setCursor(6, 0);
+      lcd.print (range);
+      lcd.setCursor(9, 0);
+      lcd.print ("Time:");
+      lcd.setCursor(14, 0);
+      lcd.print (testMinutes);
+      lcd.setCursor(0,1);
+      lcd.print(sensorReading);
+      break;
+    case 98:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print ("Range:");
+      lcd.setCursor(6, 0);
+      lcd.print (range);
+      lcd.setCursor(11, 0);
+      lcd.print (testMinutes);
+      lcd.print(":");
+      lcd.print(testSeconds);        
+      lcd.setCursor(0,1);
+      lcd.print("Max:");
+      lcd.setCursor(4,1);
+      lcd.print(maxReading);
+      lcd.setCursor(9,1);
+      lcd.print("Min:");
+      lcd.print(minReading);
+      break;
+    case 99:
+      lcd.setCursor(0,0);
+      lcd.print ("-> Fog Reading   ");//extra space to clear screen without lcd.clear()
+      lcd.setCursor(0,1);
+      lcd.write(toggleSwitch);
+      lcd.setCursor(2,1);
+      lcd.print (sensorReading);// sensorReading2 is used for sensorSimulator /sensorReading is used for data from sensors****    
+      lcd.setCursor(5,1);
+      lcd.print (" lumen      ");//extra space to clear screen without lcd.clear()
+      break;
+  }
 }
 
 void sensorValueReading(){
@@ -297,17 +286,21 @@ void sensorValueReading(){
   sensorReading = analogValue;
 
   //dummy data reading for testing============================
-  // sensorReading = dummyData[dummyCounter];
   // sensorReading = 211;
-  // dummyCounter++;
-  // // int array_length = sizeof(dummyData)/sizeof(int);
-  // // Serial.println(array_length);
+  // sensorReading = 
+
+  // int array_length = sizeof(dummyData)/sizeof(int);
+  // Serial.println(array_length);
   // if(dummyCounter >= 211){
   //   sensorReading = dummyData[210];
+  // }else{
+  //   sensorReading = dummyData[dummyCounter];
+  //   dummyCounter++;
   // }
   //============================================================
-  delay(100);
-
+  // Serial.println(sensorReading);
+  // Serial.println(dummyCounter);
+  delay(1000);
 }
 
 void calibration(int interval, int calibProcess){
@@ -326,6 +319,8 @@ void calibration(int interval, int calibProcess){
   int tempvalue=0;
   int tempValue2 =0;
   int counter2 = 0;
+  int fogMovAvg;
+  int movAvgStartCounter=0;
   // int deltaTime;
   // Serial.println(interval);
   // Serial.println(calibProcess);
@@ -357,6 +352,7 @@ void calibration(int interval, int calibProcess){
     sensorValueReading();
     //sensorReading = simulatorValues[newcounter];
     currentValue = sensorReading;// change this to sensorReading for actual sensor readings
+    fogMovAvg = sensorValues.reading(currentValue);
     currentTime = millis();
     minValue = min(currentValue,minValue);
     maxValue = max(currentValue,maxValue);
@@ -383,61 +379,60 @@ void calibration(int interval, int calibProcess){
     lcd.print("Ma");
     lcd.setCursor(13,1);
     lcd.print(maxValue);    
-
     delay(interval);
-
-    if (previousValue == currentValue){
-      if (currentValue == minReading){
-        if(tempValue2 ==  0){
-        tempValue2 = currentValue;
-        }else if (tempValue2 != 0 && tempValue2 != currentValue){
-        counter2 =0;
-        tempValue2 = currentValue;
-        }else if (tempValue2 == currentValue){
-        counter2++;
-        tempValue2 = currentValue;
-        }
-      }
-    }
+   
+    movAvgStartCounter++;  
     previousValue = currentValue;
-    if (counter2 == 100){
-      digitalWrite(pinOut, LOW);
-      Serial.println("Solenoid stopped");
-      long testduration = ((startTime - millis())/1000)/60;
-      int fogRange = maxValue -minValue;
-      long testseconds = (( millis() - startTime)/1000);
-      long testminutes = testseconds/60;
-      long remainseconds = testseconds%60;
-      Serial.println("Calibartion completed");
-      Serial.print("Sensor start:");
-      Serial.println(start);
-      Serial.print("Sensor approximate End reading:");
-      Serial.println(end);
-      Serial.print("Calibration end time:");
-      Serial.println(millis());
-      Serial.print("Current value:");
-      Serial.println(currentValue);
-      Serial.print("previous value:");
-      Serial.println(previousValue);
-      Serial.print("Max Reading:");
-      Serial.println(maxValue);
-      Serial.print("Min Reading:");
-      Serial.println(minValue);
-      Serial.print("Test Duration:");
-      Serial.print(testminutes);
-      Serial.print(":");
-      Serial.println(remainseconds);
-      Serial.print("Fog Range:");
-      Serial.println(fogRange);
-      EEPROMWritelong(maxReadingAddress,maxValue);
-      EEPROMWritelong(minReadingAddress,minValue);
-      EEPROMWritelong(testMinutesAddress,testminutes);
-      EEPROMWritelong(testSecondsAddress,remainseconds);
-      EEPROMWritelong(rangeAddress,fogRange);
-      counter2 =0;
-      calibProcess = 0;
-
-    }        
+    Serial.print("Moving average:");
+    Serial.println(fogMovAvg);
+    Serial.print("diff:");
+    Serial.println(abs(currentValue - fogMovAvg));
+    Serial.print("Counter:");
+    Serial.println(movAvgStartCounter);
+    if(movAvgStartCounter == 100){
+      if (abs(currentValue - fogMovAvg)  < 2){                   
+        Serial.print("Moving average:");
+        Serial.println(fogMovAvg);
+        Serial.print("diff:");
+        Serial.println(fogMovAvg -currentValue);
+        digitalWrite(pinOut, LOW);
+        Serial.println("Solenoid stopped");
+        long testduration = ((startTime - millis())/1000)/60;
+        int fogRange = maxValue -minValue;
+        long testseconds = (( millis() - startTime)/1000);
+        long testminutes = testseconds/60;
+        long remainseconds = testseconds%60;
+        Serial.println("Calibartion completed");
+        Serial.print("Sensor start:");
+        Serial.println(start);
+        Serial.print("Sensor approximate End reading:");
+        Serial.println(end);
+        Serial.print("Calibration end time:");
+        Serial.println(millis());
+        Serial.print("Current value:");
+        Serial.println(currentValue);
+        Serial.print("previous value:");
+        Serial.println(previousValue);
+        Serial.print("Max Reading:");
+        Serial.println(maxValue);
+        Serial.print("Min Reading:");
+        Serial.println(minValue);
+        Serial.print("Test Duration:");
+        Serial.print(testminutes);
+        Serial.print(":");
+        Serial.println(remainseconds);
+        Serial.print("Fog Range:");
+        Serial.println(fogRange);
+        EEPROMWritelong(maxReadingAddress,maxValue);
+        EEPROMWritelong(minReadingAddress,minValue);
+        EEPROMWritelong(testMinutesAddress,testminutes);
+        EEPROMWritelong(testSecondsAddress,remainseconds);
+        EEPROMWritelong(rangeAddress,fogRange);
+        counter2 =0;
+        calibProcess = 0;
+      }  
+    }     
+    
   }
 }
 
@@ -469,7 +464,6 @@ void fogTest(int interval , int foglevel, int range){
   // Serial.print("/n");
   previousValue = sensorReading;
   limit = round(range/10);
-
   if(fogLevel == 100){
     upperlimit = minReading + tolerance;
     lowerlimit = minReading;
@@ -483,20 +477,20 @@ void fogTest(int interval , int foglevel, int range){
     lowerlimit = (maxReading - (limit*(fogLevel/10)))-tolerance;
     delay(1000);
   }
-    Serial.print("Upperlimit:");
-    Serial.print(upperlimit);
-    Serial.println("\t");
-    Serial.print("Lowerlimit:");
-    Serial.print(lowerlimit);
-    Serial.println("\t");
-    Serial.print("previousValue");
-    Serial.print("\t");
-    Serial.print("currentValue");
-    Serial.println("\t");
+  Serial.print("Upperlimit:");
+  Serial.print(upperlimit);
+  Serial.println("\t");
+  Serial.print("Lowerlimit:");
+  Serial.print(lowerlimit);
+  Serial.println("\t");
+  Serial.print("previousValue");
+  Serial.print("\t");
+  Serial.print("currentValue");
+  Serial.println("\t");
 
   while(fogTestStatus == 1){
-      sensorValueReading();
-      currentValue = sensorReading;
+    sensorValueReading();
+    currentValue = sensorReading;
     if(sensorReading > upperlimit){
       digitalWrite(pinOut, HIGH);
       lcd.setBacklight(RED);
@@ -506,21 +500,20 @@ void fogTest(int interval , int foglevel, int range){
     }else{
       digitalWrite(pinOut, LOW);
       lcd.setBacklight(GREEN);
-    }
-    lcd.setCursor(9, 0);
-    lcd.print(sensorReading);
-    delay(interval);
-    Serial.print(previousValue);
-    Serial.print("\t");
-    Serial.print(currentValue);
-    Serial.println("\t");
-   
+     }
+      lcd.setCursor(9, 0);
+      lcd.print(sensorReading);
+      delay(interval);
+      Serial.print(previousValue);
+      Serial.print("\t");
+      Serial.print(currentValue);
+      Serial.println("\t"); 
     if(previousValue < currentValue){
-        lcd.setCursor(14, 0);
-        lcd.write(byte(0));
+      lcd.setCursor(14, 0);
+      lcd.write(byte(0));
     }else if(previousValue > currentValue){
-        lcd.setCursor(14, 0);
-        lcd.write(byte(1));
+      lcd.setCursor(14, 0);
+      lcd.write(byte(1));
     }
     previousValue = currentValue;
     currentTime = millis();
@@ -534,7 +527,6 @@ void fogTest(int interval , int foglevel, int range){
       Serial.println("Test Finished");
     }
   }
-
 }
 
 void menuView( String menu[], int menulength){
