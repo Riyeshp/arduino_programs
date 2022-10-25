@@ -7,30 +7,26 @@
 
 #define NUMITEMS(arg) ((unsigned int) (sizeof (arg) / sizeof (arg [0])))
 template< typename T, size_t N > size_t ArraySize (T (&) [N]){ return N; }
+
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
 // Variables
-
 int menu = 0; // menu value to prevent screen refresh
 String screens[]= {"->Settings","->Calibration", "->Test Status"};
 String settingScreens[]={"< FogLevel     >", "< Interval     >", "< Increment    >", "< Test Duration>"};
 String calibrationScreens[]={"< Start        >","< old results  >"};
 String testScreens[]={"< Test start >","< Manual Start >"};
-
-int dummyData[]= {480,479,478,477,476,475,474,473,472,471,470,469,468,467,466,466,466,465,463,462,461,460,459,458,457,456,455,455,454,453,452,451,450,450,449,448,447,446,445,444,443,442,441,440,439,438,437,436,435,434,433,432,431,430,429,428,427,426,425,424,423,422,421,420,419,418,417,416,415,414,413,412,411,410,409,408,407,406,405,404,403,402,401,400,399,398,397,396,395,394,393,392,391,390,389,388,387,386,385,384,383,382,381,380,380,380,380,380,381,382,383,384,385,386,387,388,389,390,391,392,393,394,395,396,397,398,399,400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,418,419,420,421,422,423,424,425,426,427,428,429,430,431,432,433,434,435,436,437,438,439,440,441,442,443,444,445,446,447,448,449,450,451,452,453,454,455,456,457,458,459,460,461,462,463,465,466,467,468,469,470,471,472,472,472,472,472,473,474,475,476,477,478,479,480};
-int dummyCounter = 0;
 int sensorReading;//Actual sensor Reading data
 int toggleSwitch;//sensorsimulator limit toggle switch. it also control the landing page up and down arrows.****
 int solenoidSwitch = 0;//?
 bool manualSwitchStatus = false;//ON OFF button for manually operating the solenoid
-int fogTestStatus = 0; // loop control inside for test function
+int fogTestStatus = 0; // variable to drive loop function inside  fogtest function.
 int startvalue = 340;//for sensorsimulator only
 int default_max;//
 int default_min;//
 int pinOut = 10;
 int upwardSwitch = 0;
-movingAvg sensorValues(30);
-
+movingAvg sensorValues(20);//moving average data point set. any value more than 20 is breaking the code.
 //EEPROM Variables
 int interval;
 int intervalAddress=5;//Address location on EEPROM memory
@@ -50,7 +46,6 @@ int testSeconds;
 int testSecondsAddress=40;//Address location on EEPROM memory
 int testDuration;
 int testDurationAddress=45;
-
 //LCD color assignment
 #define RED 0x1
 #define YELLOW 0x3
@@ -59,7 +54,6 @@ int testDurationAddress=45;
 #define BLUE 0x4
 #define VIOLET 0x5
 #define WHITE 0x7
-
 //Custom character assignment
 byte customChar1[] = {
   B00100,
@@ -117,7 +111,6 @@ void EEPROMWritelong(int address, long value)
       EEPROM.write(address + 3, one);
       }
 //EEPROM Files done
-
 void setup() {
   Serial.begin(9600);
   sensorValues.begin();
@@ -155,7 +148,6 @@ void setup() {
   Serial.print("Test Duration:");
   Serial.println(testDuration);
 }
-
 void loop() {
   uint8_t buttons = lcd.readButtons();
   // below lines of codes are used  whenever values had to be written into the EEPROM addresses DONT delete!!
@@ -194,60 +186,12 @@ void loop() {
     delay(1000);    
   }
 }
-
-void displayMenu(int x) {//obselete function of displayView  but is used to display landing screen
+void displayMenu(int x) {//function to display landing screen.
   switch (x) {
     default:
       lcd.clear();
       lcd.setCursor(0,0);
-      lcd.print ("Default");     
-    case 0:
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print (screens[x]);
-      lcd.setCursor(0,1);
-      lcd.print(x);
-      break;
-    case 1:
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print (screens[x]);
-      lcd.setCursor(0,1);
-      lcd.print(x);
-      menu =100;
-      break;
-    case 2:
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print (screens[x]);    
-      lcd.setCursor(0,1);
-      lcd.print(x);
-      menu =100;
-      break;
-    case 3:
-      fogTest(interval,fogLevel, range);
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print ("->Fog test");      
-      lcd.setCursor(0,1);
-      lcd.print(x);
-      lcd.setCursor(2,1);
-      lcd.print("Fog Level:10%");
-      menu =100;
-      break;
-    case 97:
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print ("Calib Inprogress");
-      lcd.setCursor(6, 0);
-      lcd.print (range);
-      lcd.setCursor(9, 0);
-      lcd.print ("Time:");
-      lcd.setCursor(14, 0);
-      lcd.print (testMinutes);
-      lcd.setCursor(0,1);
-      lcd.print(sensorReading);
-      break;
+      lcd.print ("Default");
     case 98:
       lcd.clear();
       lcd.setCursor(0,0);
@@ -265,7 +209,7 @@ void displayMenu(int x) {//obselete function of displayView  but is used to disp
       lcd.setCursor(9,1);
       lcd.print("Min:");
       lcd.print(minReading);
-      break;
+      break;     
     case 99:
       lcd.setCursor(0,0);
       lcd.print ("-> Fog Reading   ");//extra space to clear screen without lcd.clear()
@@ -278,57 +222,33 @@ void displayMenu(int x) {//obselete function of displayView  but is used to disp
       break;
   }
 }
-
-void sensorValueReading(){
+void sensorValueReading(){//function to read the sensor at analog pin A0(Big LDR sensor). (A1(small LDR sensor) is not yet used)
   // reads the input on analog pin A0 (value between 0 and 1023)
   int analogValue = analogRead(A0);
   int analogValue1 = analogRead(A2);
   sensorReading = analogValue;
-
-  //dummy data reading for testing============================
-  // sensorReading = 211;
-  // sensorReading = 
-
-  // int array_length = sizeof(dummyData)/sizeof(int);
-  // Serial.println(array_length);
-  // if(dummyCounter >= 211){
-  //   sensorReading = dummyData[210];
-  // }else{
-  //   sensorReading = dummyData[dummyCounter];
-  //   dummyCounter++;
-  // }
-  //============================================================
-  // Serial.println(sensorReading);
-  // Serial.println(dummyCounter);
   delay(1000);
 }
-
-void calibration(int interval, int calibProcess){
+void calibration(int interval, int calibProcess){//calibration cycle function
   int maxValue;
   int minValue;
-  // int newcounter =0; // simulatorValue variable
   int counter =0;
   int start;
   int end;
   long startTime;
   int previousValue;
   int currentValue;
-  // int deltaValue;
   long currentTime;
   long previousTime;
   int tempvalue=0;
   int tempValue2 =0;
   int counter2 = 0;
   int fogMovAvg;
-  int movAvgStartCounter=0;
-  // int deltaTime;
-  // Serial.println(interval);
-  // Serial.println(calibProcess);
- 
+  int movAvgStartCounter=0; 
   sensorValueReading();
   startTime = millis();
   start = sensorReading;// change this to sensorReading for actual sensor readings
-  end  = start -10;// hardcoded number for 10 less than the final value
+  end  = start -10;// hardcoded number for 10 less than the final value . end value not relevent with new movingAvg calibration cycle
   //log timestamp and start value to SD card
   previousTime = millis();
   previousValue = start;
@@ -346,8 +266,13 @@ void calibration(int interval, int calibProcess){
   Serial.print("Min");
   Serial.print("\t");
   Serial.print("Max");
+  Serial.print("\t");
+  Serial.print("MovingAverage");
+  Serial.print("\t");
+  Serial.print("Difference");
+  Serial.print("\t");
+  Serial.print("Counter");
   Serial.println("\t");
-
   while(calibProcess == 1){
     sensorValueReading();
     //sensorReading = simulatorValues[newcounter];
@@ -366,6 +291,12 @@ void calibration(int interval, int calibProcess){
     Serial.print(minValue);
     Serial.print("\t");
     Serial.print(maxValue);
+    Serial.print("\t");
+    Serial.print(fogMovAvg);
+    Serial.print("\t");
+    Serial.print(abs(currentValue - fogMovAvg));
+    Serial.print("\t");
+    Serial.print(movAvgStartCounter);
     Serial.println(" ");
     lcd.setCursor(0,1);
     lcd.print("C");
@@ -379,17 +310,10 @@ void calibration(int interval, int calibProcess){
     lcd.print("Ma");
     lcd.setCursor(13,1);
     lcd.print(maxValue);    
-    delay(interval);
-   
+    delay(interval);   
     movAvgStartCounter++;  
     previousValue = currentValue;
-    Serial.print("Moving average:");
-    Serial.println(fogMovAvg);
-    Serial.print("diff:");
-    Serial.println(abs(currentValue - fogMovAvg));
-    Serial.print("Counter:");
-    Serial.println(movAvgStartCounter);
-    if(movAvgStartCounter == 100){
+    if(movAvgStartCounter >= 100){
       if (abs(currentValue - fogMovAvg)  < 2){                   
         Serial.print("Moving average:");
         Serial.println(fogMovAvg);
@@ -432,11 +356,9 @@ void calibration(int interval, int calibProcess){
         calibProcess = 0;
       }  
     }     
-    
   }
 }
-
-void fogTest(int interval , int foglevel, int range){
+void fogTest(int interval , int foglevel, int range){// fogtest function.
   //percentage logic here
   // int analogValue = analogRead(A0);
   // int analogValue1 = analogRead(A2);
@@ -487,7 +409,6 @@ void fogTest(int interval , int foglevel, int range){
   Serial.print("\t");
   Serial.print("currentValue");
   Serial.println("\t");
-
   while(fogTestStatus == 1){
     sensorValueReading();
     currentValue = sensorReading;
@@ -528,13 +449,11 @@ void fogTest(int interval , int foglevel, int range){
     }
   }
 }
-
-void menuView( String menu[], int menulength){
+void menuView( String menu[], int menulength){// menu view for arduino LCD
   int menuloc = 0;
-  int x =0;
+  int x =0;// Variable to drive the while loop listening to button presses.
   delay(500);
   Serial.println(menu[0]);
-
   displayView(menu,menulength, menuloc);
   while (x == 0){
     uint8_t buttons = lcd.readButtons();
@@ -596,7 +515,7 @@ void menuView( String menu[], int menulength){
             break;
           case 1:
             intervalSetup();
-            Serial.println("Freuency setup");
+            Serial.println("Interval setup");
             break;
           case 2:            
             //lcd.clear();
@@ -620,8 +539,7 @@ void menuView( String menu[], int menulength){
             lcd.clear();
             displayMenu(98);
             break;
-        }
-       
+        }       
       }else if (menu == testScreens){
           switch(menuloc){
           case 0:
@@ -643,34 +561,27 @@ void menuView( String menu[], int menulength){
   }
 
 }
-
-void displayView(String menu[],int menulength, int menuloc){
-  int line1x;
-  int line1y;
-  int line2x;
-  int line2y;
-
+void displayView(String menu[],int menulength, int menuloc){// function to display various Menuview option
+  // int line1x;
+  // int line1y;
+  // int line2x;
+  // int line2y;
   if(menu == screens){
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(menu[menuloc]);
-
   }else if (menu == settingScreens || menu == calibrationScreens ||menu == testScreens  ){
     lcd.clear();
     lcd.setCursor(0, 1);
     lcd.print(menu[menuloc]);
     // lcd.setCursor(0, 1);
     // lcd.print(menu[menuloc]);
-
   }
  
 
 }
-
-void manualSolenoidSwitch(){
-
+void manualSolenoidSwitch(){//function to manual control Solenoid 
   manualSwitchStatus = !manualSwitchStatus;
-
   if(manualSwitchStatus){
     lcd.setCursor(0,1);
     lcd.println("Solenoid ON     ");
@@ -679,13 +590,9 @@ void manualSolenoidSwitch(){
     lcd.setCursor(0,1);
     lcd.println("Solenoid OFF    ");
     digitalWrite(pinOut, LOW);
-
   }
   delay(1000);
- 
-
 }
-
 void arrowticker(int x, int y, int previousValue, int currentValue){
     if(previousValue < currentValue){
         lcd.setCursor(x, y);
@@ -693,16 +600,14 @@ void arrowticker(int x, int y, int previousValue, int currentValue){
     }else if(previousValue > currentValue){
         lcd.setCursor(x, y);
         lcd.write(byte(1));
-
     }
 }
-
-void intervalSetup(){
+void intervalSetup(){// function to set the interval value for the tests.
   int tempInterval;
   int timeinmilis;
   int tempIncrement = 1; //increment;// change that to increment if you want to drive the interval increment by increment variable
   tempInterval = EEPROMReadlong(intervalAddress) /1000;
-  int y = 1 ;
+  int y = 1 ;// Variable to drive the while loop listening to button presses.
   int z = 2;
   while(y == 1){
     lcd.clear();
@@ -718,19 +623,19 @@ void intervalSetup(){
     // lcd.write(z);
     delay(300);
     uint8_t buttons = lcd.readButtons();
-    Serial.println("test 680");
+    // Serial.println("test 680");
     if(buttons & BUTTON_LEFT && tempInterval >0){
       tempInterval= tempInterval-tempIncrement;
-      Serial.println("test 684");
+      // Serial.println("test 684");
     }else if(buttons & BUTTON_RIGHT && tempInterval < 100){
       tempInterval= tempInterval+tempIncrement;
-      Serial.println("test 687");
+      // Serial.println("test 687");
     }else if(buttons & BUTTON_SELECT){
       Serial.println(tempInterval);
       timeinmilis = tempInterval*1000;
       EEPROMWritelong(intervalAddress,timeinmilis);
       // interval = EEPROMReadlong(intervalAddress);
-      Serial.println("test 691");
+      // Serial.println("test 691");
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Interval:");
@@ -745,12 +650,11 @@ void intervalSetup(){
       z=3;
       y = 0;      
     }else if(buttons & BUTTON_DOWN){
-     
-      Serial.println("test 696");
+      // Serial.println("test 696");
     }
   }
 }
-void fogLevelSetup(int x ){
+void fogLevelSetup(int x ){// function to set the fog level.
   int tempFogLevel;
   tempFogLevel = fogLevel;
   int y = 1 ;
@@ -792,10 +696,10 @@ void fogLevelSetup(int x ){
  
 
 }
-void incrementSetup(){
+void incrementSetup(){// function to set the increment values. 
   int tempIncrement;
   tempIncrement = EEPROMReadlong(incrementAddress);
-  int y = 1 ;
+  int y = 1 ;// Variable to drive the while loop listening to button presses.
   int z = 2;
   while(y == 1){
     lcd.setCursor(0, 1);
@@ -808,18 +712,17 @@ void incrementSetup(){
     // lcd.write(z);
     delay(300);
     uint8_t buttons = lcd.readButtons();
-    Serial.println("test 763");
- 
-    if(buttons & BUTTON_LEFT && tempIncrement >0){
+    // Serial.println("test 763");
+     if(buttons & BUTTON_LEFT && tempIncrement >0){
       tempIncrement= tempIncrement-1;
-      Serial.println("test 767");
+      // Serial.println("test 767");
     }else if(buttons & BUTTON_RIGHT && tempIncrement < 150){
       tempIncrement= tempIncrement+1;
-      Serial.println("test 770");
+      // Serial.println("test 770");
     }else if(buttons & BUTTON_SELECT){
       Serial.println(tempIncrement);
       EEPROMWritelong(incrementAddress,tempIncrement);
-      Serial.println("test 774");
+      // Serial.println("test 774");
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Increment: ");
@@ -833,17 +736,15 @@ void incrementSetup(){
       lcd.println(" to exit  ");
       z=3;
       y = 0;
-    }else if(buttons & BUTTON_DOWN){
-     
-      Serial.println("test 779");
+    }else if(buttons & BUTTON_DOWN){     
+      // Serial.println("test 779");
     }
   }
 }
-
-void testDurationSetup(){
+void testDurationSetup(){//function to set the test duration.
   int tempDuration = EEPROMReadlong(testDurationAddress);
   // int tempDuration = tempValue;
-  int x = 1;
+  int x = 1;// Variable to drive the while loop listening to button presses.
   lcd.clear();
   while(x == 1){
     lcd.setCursor(0, 1);
@@ -854,18 +755,18 @@ void testDurationSetup(){
     lcd.print("min>");
     delay(300);
     uint8_t buttons = lcd.readButtons();
-    Serial.println("test 857");
+    // Serial.println("test 857");
   
     if(buttons & BUTTON_LEFT && tempDuration > 0){
       tempDuration= tempDuration-5;
-      Serial.println("test 861");
+      // Serial.println("test 861");
         // if(tempDuration < 0){
         //   tempDuration = 0;
         //   lcd.clear();
         // }
     }else if(buttons & BUTTON_RIGHT && tempDuration < 300 ){ //the Duration is limited to max of 5hrs i.e 300 mins
       tempDuration= tempDuration+5;
-      Serial.println("test 770");
+      // Serial.println("test 770");
     }else if(buttons & BUTTON_SELECT){
       Serial.println(tempDuration);
       // tempValue = tempDuration*1000;
