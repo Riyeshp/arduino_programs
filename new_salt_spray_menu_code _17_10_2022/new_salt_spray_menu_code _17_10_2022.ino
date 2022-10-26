@@ -5,6 +5,7 @@
 #include <math.h>
 #include <movingAvg.h> 
 
+//array length calculation
 #define NUMITEMS(arg) ((unsigned int) (sizeof (arg) / sizeof (arg [0])))
 template< typename T, size_t N > size_t ArraySize (T (&) [N]){ return N; }
 
@@ -17,15 +18,10 @@ String settingScreens[]={"< FogLevel     >", "< Interval     >", "< Increment   
 String calibrationScreens[]={"< Start        >","< old results  >"};
 String testScreens[]={"< Test start >","< Manual Start >"};
 int sensorReading;//Actual sensor Reading data
-int toggleSwitch;//sensorsimulator limit toggle switch. it also control the landing page up and down arrows.****
-int solenoidSwitch = 0;//?
+int toggleSwitch;// it control the landing page up and down arrows.****
 bool manualSwitchStatus = false;//ON OFF button for manually operating the solenoid
 int fogTestStatus = 0; // variable to drive loop function inside  fogtest function.
-int startvalue = 340;//for sensorsimulator only
-int default_max;//
-int default_min;//
-int pinOut = 10;
-int upwardSwitch = 0;
+int pinOut = 10; //sensor pin
 movingAvg sensorValues(20);//moving average data point set. any value more than 20 is breaking the code.
 //EEPROM Variables
 int interval;
@@ -85,7 +81,7 @@ byte arrowdown[] = {
   B01110,
   B00100
 };
-//EEPROM Files
+//EEPROM functions
 long EEPROMReadlong(long address)
       {
       //Read the 4 bytes from the eeprom memory.
