@@ -22,7 +22,7 @@ int toggleSwitch;// it control the landing page up and down arrows.****
 bool manualSwitchStatus = false;//ON OFF button for manually operating the solenoid
 int fogTestStatus = 0; // variable to drive loop function inside  fogtest function.
 int pinOut = 10; //sensor pin
-movingAvg sensorValues(20);//moving average data point set. any value more than 20 is breaking the code.
+movingAvg sensorValues(15);//moving average data point set. any value more than 20 is breaking the code.
 //EEPROM Variables
 int interval;
 int intervalAddress=5;//Address location on EEPROM memory
@@ -662,19 +662,19 @@ void fogLevelSetup(int x ){// function to set the fog level.
     lcd.setCursor(13, 1);
     lcd.print("% >");
     uint8_t buttons = lcd.readButtons();
-    Serial.println("test 588");
+    // Serial.println("test 588");
     delay(300);
     if(buttons & BUTTON_LEFT && tempFogLevel >0){
       tempFogLevel= tempFogLevel-10;
-      Serial.println("test 592");
+      // Serial.println("test 592");
     }else if(buttons & BUTTON_RIGHT && tempFogLevel < 100){
       tempFogLevel= tempFogLevel+10;
-      Serial.println("test 595");
+      // Serial.println("test 595");
     }else if(buttons & BUTTON_SELECT){
       Serial.println(tempFogLevel);
       EEPROMWritelong(foglevelAddress,tempFogLevel);
       fogLevel = EEPROMReadlong(foglevelAddress);
-      Serial.println("test 600");
+      // Serial.println("test 600");
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Fog level:");
