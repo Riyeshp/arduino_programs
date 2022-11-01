@@ -241,6 +241,7 @@ void calibration(int interval, int calibProcess){//calibration cycle function
   int counter2 = 0;
   int fogMovAvg;
   int movAvgStartCounter=0; 
+  lcd.setBacklight(TEAL);
   sensorValueReading();
   startTime = millis();
   start = sensorReading;// change this to sensorReading for actual sensor readings
