@@ -19,7 +19,7 @@ int menu = 0; // menu value to prevent screen refresh
 String screens[]= {"->Settings", "->Test Status"};
 String settingScreens[]={"<SolenoidSelect>", "<Delay         >", "<Limit         >","<Limit switch  >","<Counter reset >"};
 String testScreens[]={"<Limit Cycle   >","<Manual Cycle  >"};
-String solenoidList[]={"A","B","A&B","A||B" };
+String solenoidList[]={"A","B","A&B","A/B" };
 int sensorReading;//Actual sensor Reading data
 int toggleSwitch;// it control the landing page up and down arrows.****
 bool manualSwitchStatus = false;//ON OFF button for manually operating the solenoid
@@ -158,7 +158,7 @@ void loop() {
   // below lines of codes are used  whenever values had to be written into the EEPROM addresses manually DONT delete!!
   // EEPROMWritelong(delayTimeAddress,5000);
   //EEPROMWritelong(stepAddress,175);
-  //  EEPROMWritelong(limitAddress, 25);
+    // EEPROMWritelong(limitAddress, 100000);
   //  EEPROMWritelong(counterSwitchAddress, true);
   // EEPROMWritelong(countAddress, 5);
   // EEPROMWritelong(solenoidSelectionAddress, 2);
@@ -235,34 +235,55 @@ void limitCycle(){
   counterSwitch= EEPROMReadlong(counterSwitchAddress);
   int tempCount=EEPROMReadlong(countAddress);
   lcd.setBacklight(BLUE);
+  lcd.clear();
   while(counterSwitch ==1){
     uint8_t buttons = lcd.readButtons();
     switch(solenoidSelection){
       case 0: //A solenoid only.
         digitalWrite(6, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("  6H");
         delay(delayTime);
         digitalWrite(6, LOW);
+        lcd.setCursor(12, 0);
+        lcd.print("  6L");
+        delay(delayTime);
         break;
       case 1://B solenoid only.
         digitalWrite(7, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("7H  ");
         delay(delayTime);
         digitalWrite(7, LOW);
+        lcd.setCursor(12, 0);
+        lcd.print("7L  ");
+        delay(delayTime);
         break;
       case 2://A and B solenoid together based on the delay time.
         digitalWrite(6, HIGH);
         digitalWrite(7, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("7H6H");
         delay(delayTime);
         digitalWrite(6, LOW);
         digitalWrite(7, LOW);
+        lcd.setCursor(12, 0);
+        lcd.print("7L6L");
         delay(delayTime);   
         break;
       case 3://A and B solenoid alternatively based on the delay time.
         digitalWrite(6, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("  6H");
         delay(delayTime);
         digitalWrite(6, LOW);
         digitalWrite(7, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("7H6L");
         delay(delayTime);
         digitalWrite(7, LOW);
+        lcd.setCursor(12, 0);
+        lcd.print("7L  ");
         break;
     }
     if(hundred > 100){
@@ -294,8 +315,10 @@ void limitCycle(){
     lcd.clear();
     hundred=hundred+1;
     lcd.setCursor(0, 0);
-    lcd.print("Cycle Count");
+    lcd.print("Cycle Count:");
     lcd.setCursor(0, 1);
+    // lcd.print(">");
+    // lcd.setCursor(0, 2);
     lcd.print((count+hundred)); 
     tempCount++;   
   }  
@@ -377,6 +400,10 @@ void menuView( String menu[], int menulength){// menu view for arduino LCD
               Serial.println("Counter Switch turned OFF");
               lcd.setCursor(0,0);
               lcd.println("Limit switch OFF      ");
+              lcd.setCursor(1, 0);
+              lcd.print(">Limit:");
+              lcd.println(limit);
+              break;
             }
             limitCycle();
             break;
@@ -608,29 +635,50 @@ void manualCycle(){
     switch(solenoidSelection){
       case 0: //A solenoid only.
         digitalWrite(6, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("  6H");
         delay(delayTime);
         digitalWrite(6, LOW);
+        lcd.setCursor(12, 0);
+        lcd.print("  6L");
+        delay(delayTime);
         break;
       case 1://B solenoid only.
-        digitalWrite(7, HIGH);
+        digitalWrite(7, HIGH);        
+        lcd.setCursor(12, 0);
+        lcd.print("7H  ");
         delay(delayTime);
         digitalWrite(7, LOW);
+        lcd.setCursor(12, 0);
+        lcd.print("7L  ");
+        delay(delayTime);
         break;
       case 2://A and B solenoid together based on the delay time.
         digitalWrite(6, HIGH);
         digitalWrite(7, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("7H6H");
         delay(delayTime);
         digitalWrite(6, LOW);
         digitalWrite(7, LOW);
-        delay(delayTime);   
+        lcd.setCursor(12, 0);
+        lcd.print("7L6L");
+        delay(delayTime);
         break;
       case 3://A and B solenoid alternatively based on the delay time.
         digitalWrite(6, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("  6H");
         delay(delayTime);
         digitalWrite(6, LOW);
         digitalWrite(7, HIGH);
+        lcd.setCursor(12, 0);
+        lcd.print("7H6L ");
         delay(delayTime);
         digitalWrite(7, LOW);
+        lcd.setCursor(12, 0);
+        lcd.print("7L  ");
+        delay(delayTime);
         break;
     }
 
@@ -654,8 +702,9 @@ void manualCycle(){
     lcd.clear();
     hundred=hundred+1;
     lcd.setCursor(0, 0);
-    lcd.print("Cycle Count");
+    lcd.print("Cycle Count:");
     lcd.setCursor(0, 1);
+    // lcd.print(">");
     lcd.print((count+hundred)); 
     tempCount++;  
     // delay(800);
