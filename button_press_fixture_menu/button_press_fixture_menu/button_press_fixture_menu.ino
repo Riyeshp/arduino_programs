@@ -19,7 +19,7 @@ int menu = 0; // menu value to prevent screen refresh
 String screens[]= {"->Settings", "->Test Status"};
 String settingScreens[]={"<SolenoidSelect>", "<Delay         >", "<Limit         >","<Limit switch  >","<Counter reset >"};
 String testScreens[]={"<Limit Cycle   >","<Manual Cycle  >"};
-String solenoidList[]={"A","B","A&B","A/B" };
+String solenoidList[]={"A","B","A&B","A||B" };
 int sensorReading;//Actual sensor Reading data
 int toggleSwitch;// it control the landing page up and down arrows.****
 bool manualSwitchStatus = false;//ON OFF button for manually operating the solenoid
@@ -37,6 +37,7 @@ long limit;
 long limitAddress=45;//Address location on EEPROM memory
 // long counter;
 long count=0;
+long address=25;
 long countAddress=55;//Address location on EEPROM memory
 bool counterSwitch;
 bool counterSwitchAddress =35;//Address location on EEPROM memory
@@ -51,7 +52,7 @@ int hundred=0;//counter
 int Time=0;
 int timer=0; 
 int Reset=1;
-long address=0;
+
 long testvalue =0;
 
 
@@ -94,6 +95,8 @@ byte arrowdown[] = {
   B01110,
   B00100
 };
+
+void(* resetFunc) (void) = 0;
 //EEPROM functions
 long EEPROMReadlong(long address)
       {
@@ -156,12 +159,12 @@ void setup() {
 void loop() {
   uint8_t buttons = lcd.readButtons();
   // below lines of codes are used  whenever values had to be written into the EEPROM addresses manually DONT delete!!
-  // EEPROMWritelong(delayTimeAddress,5000);
-  //EEPROMWritelong(stepAddress,175);
-    // EEPROMWritelong(limitAddress, 100000);
+  //EEPROMWritelong(delayTimeAddress,5000);
+  // EEPROMWritelong(stepAddress,175);
+  // EEPROMWritelong(limitAddress, 1000);
   //  EEPROMWritelong(counterSwitchAddress, true);
   // EEPROMWritelong(countAddress, 5);
-  // EEPROMWritelong(solenoidSelectionAddress, 2);
+  //EEPROMWritelong(solenoidSelectionAddress, 2);
 
   //button selected
   if (buttons) {
@@ -234,8 +237,7 @@ void sensorValueReading(){//function to read the sensor at analog pin A0(Big LDR
 void limitCycle(){
   counterSwitch= EEPROMReadlong(counterSwitchAddress);
   int tempCount=EEPROMReadlong(countAddress);
-  lcd.setBacklight(BLUE);
-  lcd.clear();
+  // lcd.setBacklight(BLUE);
   while(counterSwitch ==1){
     uint8_t buttons = lcd.readButtons();
     switch(solenoidSelection){
@@ -315,10 +317,8 @@ void limitCycle(){
     lcd.clear();
     hundred=hundred+1;
     lcd.setCursor(0, 0);
-    lcd.print("Cycle Count:");
+    lcd.print("Cycle Count");
     lcd.setCursor(0, 1);
-    // lcd.print(">");
-    // lcd.setCursor(0, 2);
     lcd.print((count+hundred)); 
     tempCount++;   
   }  
@@ -400,10 +400,6 @@ void menuView( String menu[], int menulength){// menu view for arduino LCD
               Serial.println("Counter Switch turned OFF");
               lcd.setCursor(0,0);
               lcd.println("Limit switch OFF      ");
-              lcd.setCursor(1, 0);
-              lcd.print(">Limit:");
-              lcd.println(limit);
-              break;
             }
             limitCycle();
             break;
@@ -477,7 +473,8 @@ void delayTimeSetup(){// function to set the interval value for the tests.
       lcd.setCursor(7, 1);
       lcd.println(" to exit  ");
       z=3;
-      y = 0;      
+      y = 0;  
+      delay(1000)    ;
     }else if(buttons & BUTTON_DOWN){
       // Serial.println("test 696");
     }
@@ -522,7 +519,7 @@ void solenoidSelectionSetup(){// function to set the fog level.
           lcd.println(" to exit  ");
           break;
       y = 0;
-      delay(500);
+      delay(1000);
     }
     
   }
@@ -534,6 +531,7 @@ void limitSetup(){// function to set the increment values.
   tempLimit = EEPROMReadlong(limitAddress);
   int y = 1 ;// Variable to drive the while loop listening to button presses.
   int z = 2;
+  lcd.clear();
   while(y == 1){
     lcd.setCursor(0, 1);
     lcd.print("<Limit:        >");
@@ -571,6 +569,7 @@ void limitSetup(){// function to set the increment values.
       lcd.println(" to exit  ");
       z=3;
       y = 0;
+      delay(1000);
     }else if(buttons & BUTTON_DOWN){     
       // Serial.println("test 779");
     }
@@ -621,15 +620,15 @@ void counterReset(){
   Serial.println("Counter reset Done");
   lcd.setCursor(0,0);
   lcd.print("Reset done");
+  delay(1000);
+  resetFunc();
 }
 void manualCycle(){
   
   EEPROMWritelong(counterSwitchAddress, true);
   counterSwitch= EEPROMReadlong(counterSwitchAddress);
   int tempCount=EEPROMReadlong(countAddress);
-  lcd.setBacklight(BLUE);
-
-
+  // lcd.setBacklight(BLUE);
   while(counterSwitch ==1){
     uint8_t buttons = lcd.readButtons();
     switch(solenoidSelection){
@@ -702,9 +701,8 @@ void manualCycle(){
     lcd.clear();
     hundred=hundred+1;
     lcd.setCursor(0, 0);
-    lcd.print("Cycle Count:");
+    lcd.print("Cycle Count");
     lcd.setCursor(0, 1);
-    // lcd.print(">");
     lcd.print((count+hundred)); 
     tempCount++;  
     // delay(800);

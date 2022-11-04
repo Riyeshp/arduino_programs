@@ -606,8 +606,8 @@ void intervalSetup(){// function to set the interval value for the tests.
   tempInterval = EEPROMReadlong(intervalAddress) /1000;
   int y = 1 ;// Variable to drive the while loop listening to button presses.
   int z = 2;
+  lcd.clear();
   while(y == 1){
-    lcd.clear();
     lcd.setCursor(0, 1);
     lcd.print("<Interval ");
     lcd.setCursor(10, 1);
@@ -646,6 +646,7 @@ void intervalSetup(){// function to set the interval value for the tests.
       lcd.println(" to exit  ");
       z=3;
       y = 0;      
+      delay(1000);
     }else if(buttons & BUTTON_DOWN){
       // Serial.println("test 696");
     }
@@ -654,7 +655,9 @@ void intervalSetup(){// function to set the interval value for the tests.
 void fogLevelSetup(int x ){// function to set the fog level.
   int tempFogLevel;
   tempFogLevel = fogLevel;
+  int tempincrement = EEPROMReadlong(incrementAddress);
   int y = 1 ;
+  lcd.clear();
   while(y == 1){
     lcd.setCursor(0, 1);
     lcd.print("<FogLevel ");
@@ -666,10 +669,12 @@ void fogLevelSetup(int x ){// function to set the fog level.
     // Serial.println("test 588");
     delay(300);
     if(buttons & BUTTON_LEFT && tempFogLevel >0){
-      tempFogLevel= tempFogLevel-10;
+      tempFogLevel= tempFogLevel-tempincrement;
+      lcd.clear();
       // Serial.println("test 592");
     }else if(buttons & BUTTON_RIGHT && tempFogLevel < 100){
-      tempFogLevel= tempFogLevel+10;
+      tempFogLevel= tempFogLevel+tempincrement;
+      lcd.clear();
       // Serial.println("test 595");
     }else if(buttons & BUTTON_SELECT){
       Serial.println(tempFogLevel);
@@ -688,6 +693,7 @@ void fogLevelSetup(int x ){// function to set the fog level.
       lcd.setCursor(7, 1);
       lcd.println(" to exit  ");
       y = 0;
+      delay(1000);
     }
   }
  
@@ -698,6 +704,7 @@ void incrementSetup(){// function to set the increment values.
   tempIncrement = EEPROMReadlong(incrementAddress);
   int y = 1 ;// Variable to drive the while loop listening to button presses.
   int z = 2;
+  lcd.clear();
   while(y == 1){
     lcd.setCursor(0, 1);
     lcd.print("<Increment ");
@@ -733,6 +740,7 @@ void incrementSetup(){// function to set the increment values.
       lcd.println(" to exit  ");
       z=3;
       y = 0;
+      delay(1000);
     }else if(buttons & BUTTON_DOWN){     
       // Serial.println("test 779");
     }
@@ -782,6 +790,7 @@ void testDurationSetup(){//function to set the test duration.
       lcd.setCursor(7, 1);
       lcd.println(" to exit  ");
       x = 0;
+      delay(1000);
     }else if(buttons & BUTTON_DOWN){
      
       // Serial.println("test 779");
